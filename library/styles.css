@@ -1,0 +1,6 @@
+tbl,
+tr,
+td {
+  border: 2px double black;
+  border-collapse: collapse;
+}
