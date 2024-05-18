@@ -1,145 +1,162 @@
-const showButton = document.querySelector("#showDialog");
-const addBook = document.querySelector("#addBook");
-const outputBox = document.querySelector("output");
-const confirmBtn = addBook.querySelector("#addBtn");
-const bookTitle = addBook.querySelector("#book_title");
-const bookAuthor = addBook.querySelector("#book_author");
-const bookPages = addBook.querySelector("#book_pages");
-const isRead = addBook.querySelector("select");
-const tableContainer = document.querySelector("#tableContainer");
-const myLibrary = [];
+class Book {
+  constructor({ title, author, pagesNumber, isRead }) {
+    this.title = title;
+    this.author = author;
+    this.pagesNumber = pagesNumber;
+    this.isRead = isRead;
+  }
 
-function Book(title, author, pagesNumber, isRead) {
-  this.title = title;
-  this.id = this.title.split(" ").join("").toLowerCase();
-  this.author = author;
-  this.pagesNumber = pagesNumber;
-  this.isRead = isRead;
+  get id() {
+    return this.title.split(" ").join("").toLowerCase();
+  }
+
+  info() {
+    let readInfo;
+    if (this.isRead === "yes") {
+      readInfo = "read";
+    } else {
+      readInfo = "not read yet";
+    }
+    return (
+      this.title +
+      " by " +
+      this.author +
+      ", " +
+      this.pagesNumber +
+      " pages, " +
+      readInfo
+    );
+  }
+
+  toggleReadStatus() {
+    if (this.isRead === "yes") {
+      this.isRead = "no";
+    } else {
+      this.isRead = "yes";
+    }
+  }
 }
 
-Book.prototype.info = function () {
-  let readInfo;
-  if (isRead === "yes") {
-    readInfo = "read";
-  } else {
-    readInfo = "not read yet";
+class Library {
+  constructor({ array }) {
+    this.library = array;
   }
-  return (
-    this.title +
-    " by " +
-    this.author +
-    ", " +
-    pagesNumber +
-    " pages, " +
-    readInfo
-  );
-};
 
-Book.prototype.toggleReadStatus = function () {
-  if (this.isRead === "yes") {
-    this.isRead = "no";
-  } else {
-    this.isRead = "yes";
+  addBookToLibrary(title, author, pagesNumber, isRead) {
+    let newBook = new Book({ title, author, pagesNumber, isRead });
+    this.library.push(newBook);
   }
-};
 
-function addBookToLibrary(title, author, pagesNumber, isRead) {
-  let newBook = new Book(title, author, pagesNumber, isRead);
-  return myLibrary.push(newBook);
+  getBookById(event) {
+    const targetCell = event.target
+      .closest("tr")
+      .querySelector("td:first-child");
+    if (!targetCell) return -1;
+    let bookID = targetCell.textContent.split(" ").join("").toLowerCase();
+
+    return this.library.findIndex(function (book) {
+      return book.id === bookID;
+    });
+  }
 }
 
-function generateTable(library) {
-  tableContainer.innerHTML = "";
+class UI {
+  constructor() {
+    this.showButton = document.querySelector("#showDialog");
+    this.addBook = document.querySelector("#addBook");
+    this.outputBox = document.querySelector("output");
+    this.confirmBtn = this.addBook.querySelector("#addBtn");
+    this.bookTitle = this.addBook.querySelector("#book_title");
+    this.bookAuthor = this.addBook.querySelector("#book_author");
+    this.bookPages = this.addBook.querySelector("#book_pages");
+    this.isRead = this.addBook.querySelector("select");
+    this.tableContainer = document.querySelector("#tableContainer");
+    this.myLibrary = new Library({ array: [] });
 
-  library.forEach(function (item) {
-    const row = document.createElement("tr");
-    row.classList.add("ligne" + library.indexOf(item));
+    this.showButton.addEventListener("click", () => {
+      this.addBook.showModal();
+    });
 
-    for (let key in item) {
-      const cell = document.createElement("td");
+    this.addBook.addEventListener("close", (e) => {
+      this.addBook.close();
+    });
 
-      let isOwn = item.hasOwnProperty(key);
-      if (isOwn && key !== "id") {
+    this.confirmBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+
+      this.myLibrary.addBookToLibrary(
+        this.bookTitle.value,
+        this.bookAuthor.value,
+        this.bookPages.value,
+        this.isRead.value
+      );
+      this.addBook.close();
+
+      document.getElementById("dialogReturnMessage").innerText =
+        "Here is Your Library:";
+
+      this.generateTable(this.myLibrary.library);
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target.classList.contains("removeBtn")) {
+        let index = this.myLibrary.getBookById(event);
+        if (index === -1) return;
+
+        event.target.parentNode.parentNode.remove();
+        this.myLibrary.library.splice(index, 1);
+      } else if (event.target.classList.contains("updateBtn")) {
+        let index = this.myLibrary.getBookById(event);
+        if (index === -1) return;
+        let bookToUpdate = this.myLibrary.library[index];
+        bookToUpdate.toggleReadStatus();
+        this.generateTable(this.myLibrary.library);
+      }
+    });
+  }
+
+  generateTable(myLibrary) {
+    this.tableContainer.innerHTML = "";
+
+    myLibrary.forEach((item, index) => {
+      const row = document.createElement("tr");
+      row.classList.add("ligne" + index);
+
+      for (let key in item) {
+        const cell = document.createElement("td");
         cell.textContent = item[key];
         row.appendChild(cell);
       }
-    }
 
-    tableContainer.appendChild(row);
-  });
-  generateUpdateButton(myLibrary);
-  generateRemoveButton(myLibrary);
-}
-
-function generateRemoveButton(library) {
-  library.forEach(function (item) {
-    const row = document.querySelector(".ligne" + library.indexOf(item));
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "Remove Book";
-    removeBtn.classList.add("removeBtn");
-    const cell = document.createElement("td");
-    cell.appendChild(removeBtn);
-    row.appendChild(cell);
-  });
-}
-
-function generateUpdateButton(library) {
-  library.forEach(function (item) {
-    const row = document.querySelector(".ligne" + library.indexOf(item));
-    const updateBtn = document.createElement("button");
-    updateBtn.textContent = "Mark as Read Book";
-    updateBtn.classList.add("updateBtn");
-    const cell = document.createElement("td");
-    cell.appendChild(updateBtn);
-    row.appendChild(cell);
-  });
-}
-
-showButton.addEventListener("click", () => {
-  addBook.showModal();
-});
-
-addBook.addEventListener("close", (e) => {
-  addBook.close();
-});
-
-addBtn.addEventListener("click", (event) => {
-  event.preventDefault();
-
-  addBookToLibrary(
-    bookTitle.value,
-    bookAuthor.value,
-    bookPages.value,
-    isRead.value
-  );
-  addBook.close();
-  document.getElementById("dialogReturnMessage").innerText =
-    "Here is Your Library:";
-
-  generateTable(myLibrary);
-});
-
-document.addEventListener("click", function (event) {
-  let index = getBookById(event);
-  let bookToUpdate = myLibrary[index];
-
-  if (event.target.classList.contains("removeBtn")) {
-    event.target.parentNode.parentNode.remove();
-    myLibrary.splice(index, 1);
-  } else if (event.target.classList.contains("updateBtn")) {
-    bookToUpdate.toggleReadStatus();
-    generateTable(myLibrary);
+      this.tableContainer.appendChild(row);
+    });
+    this.generateUpdateButton(myLibrary);
+    this.generateRemoveButton(myLibrary);
   }
-});
 
-function getBookById(event) {
-  let bookID = event.target.parentNode.parentNode
-    .querySelector("td:first-child")
-    .textContent.split(" ")
-    .join("")
-    .toLowerCase();
+  generateRemoveButton(myLibrary) {
+    myLibrary.forEach((item, index) => {
+      const row = document.querySelector(".ligne" + index);
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "Remove Book";
+      removeBtn.classList.add("removeBtn");
+      const cell = document.createElement("td");
+      cell.appendChild(removeBtn);
+      row.appendChild(cell);
+    });
+  }
 
-  return myLibrary.findIndex(function (book) {
-    return book.id === bookID;
-  });
+  generateUpdateButton(myLibrary) {
+    myLibrary.forEach(function (item) {
+      const row = document.querySelector(".ligne" + myLibrary.indexOf(item));
+      const updateBtn = document.createElement("button");
+      updateBtn.textContent = "Mark as Read Book";
+      updateBtn.classList.add("updateBtn");
+      const cell = document.createElement("td");
+      cell.appendChild(updateBtn);
+      row.appendChild(cell);
+    });
+  }
 }
+
+const ui = new UI();
